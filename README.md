@@ -1,10 +1,3 @@
-# KIMM KORTEX CUSTUM
-
-This is unofficial ros-wrapper for Kortex. 
-
-All source codes are opimized for ROS-Noetic.
-
-
 # icir_tutorial_pinocchio
 CNU icir lab tutorial package for pinocchio library and mujoco simulation
 
