@@ -54,4 +54,7 @@ roslaunch icir_tutorial_pinocchio icir_tutorial_pinocchio_simulation.launch
 
 from terminal, press 'h' to move the robot to the home pose
 from terminal, press 'a' to move the robot to another pose
+
+from terminal, press 'k' to move the robot to -0.05m in global z direction
+from terminal, press 'v' to enable cartesian impedance control in translational direction
 ```
