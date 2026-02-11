@@ -20,6 +20,7 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "std_msgs/Float32MultiArray.h"
+#include <std_msgs/Float64MultiArray.h>
 #include "std_msgs/Float32.h"
 #include "std_msgs/Bool.h"
 #include "std_msgs/UInt8.h"
@@ -50,6 +51,8 @@ using namespace pinocchio;
 ros::Publisher mujoco_command_pub_;
 ros::Publisher robot_command_pub_;
 ros::Publisher mujoco_run_pub_;
+ros::Publisher pos_des_pub_, pos_cur_pub_;
+
 
 ros::Subscriber jointState;
 ros::Subscriber mujoco_command_sub;
@@ -60,9 +63,10 @@ mujoco_ros_msgs::JointSet robot_command_msg_;
 /////////////////////////// pinocchio & mujoco Setting /////////////////////////////////
 typedef pinocchio::Model Model;
 typedef pinocchio::Data Data;
+typedef Eigen::Matrix<double, 6, 1> Vector6d;
+typedef Eigen::Matrix<double, 7, 1> Vector7d;
 
-#if GEN3_DOF == 6
-    typedef Eigen::Matrix<double, 6, 1> Vector6d;
+#if GEN3_DOF == 6    
     typedef struct State {   
         Vector6d q;
         Vector6d v;
@@ -79,15 +83,24 @@ typedef pinocchio::Data Data;
         double stime;
         double ftime;
     } cubicvar;
-    Vector6d q_target_;
-    Vector6d X_target_;
-    Vector6d Kp, Kd;
+    typedef struct SE3CubicVar {
+        pinocchio::SE3 m_init;
+        pinocchio::SE3 m_goal;    
+        double stime;
+        double duration;
+    } se3cubicvar;    
+    Vector6d q_target_;    
+    Vector6d posture_Kp, posture_Kd;
+    Vector6d ee_Kp, ee_Kd;
 #else
-    typedef Eigen::Matrix<double, 7, 1> Vector7d;
     typedef struct State {   
         Vector7d q;
         Vector7d v;
         Vector7d q_des;
+        Vector7d q_des_pre;
+        Vector7d v_des;
+        Vector7d ddq_des;
+        Vector7d tau_des;
         Data::Matrix6x J;
     } state;  
     typedef struct CubicVar {
@@ -96,27 +109,51 @@ typedef pinocchio::Data Data;
         double stime;
         double ftime;
     } cubicvar;
+    typedef struct SE3CubicVar {
+        pinocchio::SE3 m_init;
+        pinocchio::SE3 m_goal;    
+        double stime;
+        double duration;
+    } se3cubicvar;    
     Vector7d q_target_;
+    Vector7d posture_Kp, posture_Kd;
+    Vector6d ee_Kp, ee_Kd;
 #endif
 
 // Pinocchio
 std::shared_ptr<RobotWrapper> robot_;
 Model model_;
 Data data_;
-SE3 H_ee_;
+SE3 H_ee_, H_ee_ref_;
+Eigen::VectorXd m_p_;
+pinocchio::Data::Matrix6x m_J_local_;
+
+SE3 m_wMl;
+Motion m_drift;            
+Motion m_p_error, m_v_error, m_v_ref, m_a_ref;
+Eigen::VectorXd m_v, m_a, m_p_error_vec;
+Eigen::VectorXd m_v_ref_vec, m_a_des;
+Model::JointIndex m_joint_id;
+Model::FrameIndex m_frame_id;
 
 // Control Variable
 double mujoco_time_, time_;
 state state_;
 cubicvar cubic_;
+se3cubicvar SE3Cubic_;
 int ctrl_mode_;
 bool chg_flag_;
+Eigen::VectorXd sampleEE_;
+pinocchio::SE3 m_M_ref;
+
 
 // Waypoint
 Vector6d Home, Home2;
-Vector6d Home_cartesian;
 
 void keyboard_event();
+void pos_des_pub();
+void pos_cur_pub();
+
 bool _kbhit()
 {
     termios term;

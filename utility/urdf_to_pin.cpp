@@ -120,9 +120,9 @@ void RobotWrapper::frameClassicAcceleration(const Data & data, const Model::Fram
 }
 
 void RobotWrapper::frameJacobianLocal(Data & data, const Model::FrameIndex index, Data::Matrix6x & J) 
-{
-    Data::Matrix6x J_tmp(6, this->nv());
+{    
     assert(index<m_model.frames.size());
-
-    return pinocchio::getFrameJacobian(m_model, data, index, pinocchio::LOCAL, J) ;
+    J.resize(6, m_model.nv);
+    return pinocchio::getFrameJacobian(m_model, data, index, pinocchio::LOCAL, J) ;            
 }
+
